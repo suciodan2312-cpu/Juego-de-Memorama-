@@ -1,0 +1,286 @@
+unit uData;
+
+interface
+
+uses
+  System.SysUtils, System.Classes, System.Math, FMX.Types, FMX.Layouts,
+  FMX.Objects, FMX.Dialogs, System.UIConsts, System.UITypes,
+  System.Types, FMX.ImgList, FMX.Graphics;
+
+type
+  TCartaLogica = record
+    IDPareja: Integer;
+    Volteada: Boolean;
+    Encontrada: Boolean;
+    BotonVisual: TImage;
+  end;
+
+  TActualizarUIEvent = procedure(PtsJ1, PtsJ2, TurnoActual: Integer) of object;
+
+  TCerebroMemorama = class
+  private
+    FTablero: TLayout;
+    FListaImagenes: TCustomImageList;
+    FPrimerCarta, FSegundaCarta: Integer;
+    FTimerEspera: TTimer;
+
+    procedure GenerarYRevolverCartas(TotalCartas: Integer);
+    procedure CartaClickeada(Sender: TObject);
+    procedure TimerEsperaTick(Sender: TObject);
+    procedure MostrarImagen(CartaIdx, ImgIndex: Integer);
+
+  public
+    Cartas: array of TCartaLogica;
+    ParesTotales: Integer;
+    Turno: Integer;
+    PtsJ1, PtsJ2: Integer;
+
+    // NUEVO
+    NombreJ1: String;
+    NombreJ2: String;
+
+    OnActualizarUI: TActualizarUIEvent;
+
+    constructor Create;
+    destructor Destroy; override;
+
+    procedure IniciarJuego(
+      CantidadPares: Integer;
+      ContenedorVisual: TLayout;
+      ListaImagenes: TCustomImageList;
+      J1, J2: String
+    );
+  end;
+
+var
+  Cerebro: TCerebroMemorama;
+
+implementation
+
+{ TCerebroMemorama }
+
+constructor TCerebroMemorama.Create;
+begin
+  FTimerEspera := TTimer.Create(nil);
+  FTimerEspera.Enabled := False;
+  FTimerEspera.Interval := 1000;
+  FTimerEspera.OnTimer := TimerEsperaTick;
+end;
+
+destructor TCerebroMemorama.Destroy;
+begin
+  FTimerEspera.Free;
+  inherited;
+end;
+
+procedure TCerebroMemorama.MostrarImagen(CartaIdx, ImgIndex: Integer);
+begin
+  if not Assigned(FListaImagenes) then Exit;
+
+  if (ImgIndex >= 0) and (ImgIndex < FListaImagenes.Source.Count) then
+  begin
+    if FListaImagenes.Source.Items[ImgIndex].MultiResBitmap.Count > 0 then
+    begin
+      Cartas[CartaIdx].BotonVisual.Bitmap.Assign(
+        FListaImagenes.Source.Items[ImgIndex]
+        .MultiResBitmap.Items[0].Bitmap
+      );
+    end;
+  end;
+end;
+
+procedure TCerebroMemorama.IniciarJuego(
+  CantidadPares: Integer;
+  ContenedorVisual: TLayout;
+  ListaImagenes: TCustomImageList;
+  J1, J2: String
+);
+var
+  TotalCartas, Cols, Filas, I, C, F: Integer;
+  Margen, AnchoCarta, AltoCarta: Single;
+begin
+  NombreJ1 := J1;
+  NombreJ2 := J2;
+
+  ParesTotales := CantidadPares;
+  TotalCartas := ParesTotales * 2;
+
+  FTablero := ContenedorVisual;
+  FListaImagenes := ListaImagenes;
+
+  FTablero.DeleteChildren;
+
+  Turno := 1;
+  PtsJ1 := 0;
+  PtsJ2 := 0;
+
+  FPrimerCarta := -1;
+  FSegundaCarta := -1;
+
+  if Assigned(OnActualizarUI) then
+    OnActualizarUI(PtsJ1, PtsJ2, Turno);
+
+  GenerarYRevolverCartas(TotalCartas);
+
+  Cols := Ceil(Sqrt(TotalCartas));
+  Filas := Ceil(TotalCartas / Cols);
+
+  if (FTablero.Width > FTablero.Height) and (Filas > Cols) then
+  begin
+    I := Cols;
+    Cols := Filas;
+    Filas := I;
+  end;
+
+  Margen := 10;
+
+  AnchoCarta := (FTablero.Width - (Margen * (Cols + 1))) / Cols;
+  AltoCarta := (FTablero.Height - (Margen * (Filas + 1))) / Filas;
+
+  for I := 0 to TotalCartas - 1 do
+  begin
+    F := I div Cols;
+    C := I mod Cols;
+
+    Cartas[I].BotonVisual := TImage.Create(FTablero);
+    Cartas[I].BotonVisual.Parent := FTablero;
+
+    Cartas[I].BotonVisual.Width := AnchoCarta;
+    Cartas[I].BotonVisual.Height := AltoCarta;
+
+    Cartas[I].BotonVisual.Position.X :=
+      Margen + (C * (AnchoCarta + Margen));
+
+    Cartas[I].BotonVisual.Position.Y :=
+      Margen + (F * (AltoCarta + Margen));
+
+    Cartas[I].BotonVisual.Tag := I;
+
+    Cartas[I].BotonVisual.WrapMode := TImageWrapMode.Stretch;
+
+    MostrarImagen(I, 0);
+
+    Cartas[I].BotonVisual.OnClick := CartaClickeada;
+  end;
+end;
+
+procedure TCerebroMemorama.GenerarYRevolverCartas(TotalCartas: Integer);
+var
+  I, RndIdx: Integer;
+  Temp: TCartaLogica;
+begin
+  SetLength(Cartas, TotalCartas);
+
+  for I := 0 to TotalCartas - 1 do
+  begin
+    Cartas[I].IDPareja := I div 2;
+    Cartas[I].Volteada := False;
+    Cartas[I].Encontrada := False;
+  end;
+
+  Randomize;
+
+  for I := TotalCartas - 1 downto 1 do
+  begin
+    RndIdx := Random(I + 1);
+
+    Temp := Cartas[I];
+    Cartas[I] := Cartas[RndIdx];
+    Cartas[RndIdx] := Temp;
+  end;
+end;
+
+procedure TCerebroMemorama.CartaClickeada(Sender: TObject);
+var
+  Idx: Integer;
+  TotalEncontradas: Integer;
+begin
+  if FTimerEspera.Enabled then Exit;
+
+  Idx := TImage(Sender).Tag;
+
+  if Cartas[Idx].Encontrada or Cartas[Idx].Volteada then Exit;
+
+  Cartas[Idx].Volteada := True;
+
+  MostrarImagen(Idx, Cartas[Idx].IDPareja + 1);
+
+  if FPrimerCarta = -1 then
+  begin
+    FPrimerCarta := Idx;
+  end
+  else
+  begin
+    FSegundaCarta := Idx;
+
+    // SI SON PAREJA
+    if Cartas[FPrimerCarta].IDPareja =
+       Cartas[FSegundaCarta].IDPareja then
+    begin
+      Cartas[FPrimerCarta].Encontrada := True;
+      Cartas[FSegundaCarta].Encontrada := True;
+
+      Cartas[FPrimerCarta].BotonVisual.Opacity := 0.5;
+      Cartas[FSegundaCarta].BotonVisual.Opacity := 0.5;
+
+      if Turno = 1 then
+        Inc(PtsJ1)
+      else
+        Inc(PtsJ2);
+
+      FPrimerCarta := -1;
+      FSegundaCarta := -1;
+
+      if Assigned(OnActualizarUI) then
+        OnActualizarUI(PtsJ1, PtsJ2, Turno);
+
+      // VERIFICAR GANADOR
+      TotalEncontradas := PtsJ1 + PtsJ2;
+
+      if TotalEncontradas = ParesTotales then
+      begin
+        if PtsJ1 > PtsJ2 then
+          ShowMessage('¡Ganó ' + NombreJ1 + '!')
+        else if PtsJ2 > PtsJ1 then
+          ShowMessage('¡Ganó ' + NombreJ2 + '!')
+        else
+          ShowMessage('¡Empate!');
+      end;
+    end
+    else
+    begin
+      // CAMBIO DE TURNO
+      if Turno = 1 then
+        Turno := 2
+      else
+        Turno := 1;
+
+      if Assigned(OnActualizarUI) then
+        OnActualizarUI(PtsJ1, PtsJ2, Turno);
+
+      FTimerEspera.Enabled := True;
+    end;
+  end;
+end;
+
+procedure TCerebroMemorama.TimerEsperaTick(Sender: TObject);
+begin
+  FTimerEspera.Enabled := False;
+
+  Cartas[FPrimerCarta].Volteada := False;
+  MostrarImagen(FPrimerCarta, 0);
+
+  Cartas[FSegundaCarta].Volteada := False;
+  MostrarImagen(FSegundaCarta, 0);
+
+  FPrimerCarta := -1;
+  FSegundaCarta := -1;
+end;
+
+initialization
+  Cerebro := TCerebroMemorama.Create;
+
+finalization
+  Cerebro.Free;
+
+end.

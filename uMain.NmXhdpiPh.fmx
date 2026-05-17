@@ -1,0 +1,22 @@
+inherited Form1_NmXhdpiPh: TForm1_NmXhdpiPh
+  ClientHeight = 616
+  ClientWidth = 400
+  DesignerMasterStyle = 3
+  inherited lytCartas: TLayout
+    Size.Width = 400.000000000000000000
+    Size.Height = 497.000000000000000000
+  end
+  inherited pnlTop: TPanel
+    Size.Width = 400.000000000000000000
+    inherited Label1: TLabel
+      TextSettings.Font.StyleExt = {00070000000000000004000000}
+    end
+    inherited Label3: TLabel
+      TextSettings.Font.StyleExt = {00070000000000000004000000}
+    end
+  end
+  inherited pnlBajo: TPanel
+    Position.Y = 561.000000000000000000
+    Size.Width = 400.000000000000000000
+  end
+end

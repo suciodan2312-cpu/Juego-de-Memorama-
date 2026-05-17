@@ -1,0 +1,265 @@
+unit uData;
+
+interface
+
+uses
+  System.SysUtils, System.Classes, System.Math, FMX.Types, FMX.Layouts,
+  FMX.Objects, FMX.Dialogs, System.UIConsts, System.UITypes,
+  System.Types, FMX.ImgList, FMX.Graphics, FMX.ListBox; // Añadimos FMX.ListBox para el ComboBox
+
+type
+  TCartaLogica = record
+    IDPareja: Integer;
+    Volteada: Boolean;
+    Encontrada: Boolean;
+    BotonVisual: TImage;
+  end;
+
+  // Evento para avisar a la UI que debe refrescar los textos de puntos y turnos
+  TActualizarUIEvent = procedure(PtsJ1, PtsJ2, TurnoActual: Integer) of object;
+
+  TCerebroMemorama = class
+  private
+    FTablero: TLayout;
+    FListaImagenes: TCustomImageList;
+    FPrimerCarta, FSegundaCarta: Integer;
+    FTimerEspera: TTimer;
+
+    procedure GenerarYRevolverCartas(TotalCartas: Integer);
+    procedure CartaClickeada(Sender: TObject);
+    procedure TimerEsperaTick(Sender: TObject);
+    procedure MostrarImagen(CartaIdx, ImgIndex: Integer);
+
+    // Calcula la mejor distribución de filas y columnas para llenar el espacio
+    procedure CalcularGrid(Total: Integer; out Cols, Filas: Integer);
+
+  public
+    Cartas: array of TCartaLogica;
+    ParesTotales: Integer;
+    Turno: Integer;
+    PtsJ1, PtsJ2: Integer;
+    NombreJ1: String;
+    NombreJ2: String;
+
+    OnActualizarUI: TActualizarUIEvent;
+
+    constructor Create;
+    destructor Destroy; override;
+
+    // Nuevo método para configurar las opciones del ComboBox desde el cerebro
+    procedure ConfigurarOpcionesCartas(AComboBox: TComboBox);
+
+    procedure IniciarJuego(
+      TextoCantCartas: String; // Recibe el texto del ComboBox
+      ContenedorVisual: TLayout;
+      ListaImagenes: TCustomImageList;
+      J1, J2: String
+    );
+  end;
+
+var
+  Cerebro: TCerebroMemorama;
+
+implementation
+
+{ TCerebroMemorama }
+
+constructor TCerebroMemorama.Create;
+begin
+  FTimerEspera := TTimer.Create(nil);
+  FTimerEspera.Enabled := False;
+  FTimerEspera.Interval := 800; // Un poco más rápido para fluidez
+  FTimerEspera.OnTimer := TimerEsperaTick;
+end;
+
+destructor TCerebroMemorama.Destroy;
+begin
+  FTimerEspera.Free;
+  inherited;
+end;
+
+procedure TCerebroMemorama.ConfigurarOpcionesCartas(AComboBox: TComboBox);
+begin
+  AComboBox.Items.Clear;
+  AComboBox.Items.Add('4');
+  AComboBox.Items.Add('6');
+  AComboBox.Items.Add('8');
+  AComboBox.Items.Add('12');
+  AComboBox.Items.Add('16');
+  AComboBox.Items.Add('20');
+  AComboBox.ItemIndex := 2; // Selecciona el '8' por defecto
+end;
+
+procedure TCerebroMemorama.CalcularGrid(Total: Integer; out Cols, Filas: Integer);
+begin
+  // Buscamos una distribución que se acerque a la forma del contenedor (Layout)
+  // Si el layout es más ancho que alto, queremos más columnas que filas
+  Cols := Ceil(Sqrt(Total));
+  while (Total mod Cols <> 0) do Inc(Cols); // Asegura que el grid sea exacto
+  Filas := Total div Cols;
+
+  // Si el layout es horizontal y nos salieron más filas, invertimos
+  if (FTablero.Width > FTablero.Height) and (Filas > Cols) then
+  begin
+    Integer(Total) := Cols;
+    Cols := Filas;
+    Filas := Total;
+  end;
+end;
+
+procedure TCerebroMemorama.IniciarJuego(TextoCantCartas: String; ContenedorVisual: TLayout;
+  ListaImagenes: TCustomImageList; J1, J2: String);
+var
+  TotalCartas, Cols, Filas, I, C, F: Integer;
+  Margen, AnchoCarta, AltoCarta: Single;
+begin
+  // --- VALIDACIONES MOVIDAS AL CEREBRO ---
+  if (Trim(J1) = '') or (Trim(J2) = '') then
+  begin
+    ShowMessage('¡Faltan los nombres de los jugadores!');
+    Exit;
+  end;
+
+  TotalCartas := StrToIntDef(TextoCantCartas, 0);
+  if (TotalCartas = 0) then
+  begin
+    ShowMessage('Selecciona una cantidad de cartas válida');
+    Exit;
+  end;
+
+  // --- CONFIGURACIÓN INICIAL ---
+  NombreJ1 := J1;
+  NombreJ2 := J2;
+  FTablero := ContenedorVisual;
+  FListaImagenes := ListaImagenes;
+  FTablero.DeleteChildren; // Limpia cartas anteriores
+
+  ParesTotales := TotalCartas div 2;
+  Turno := 1;
+  PtsJ1 := 0;
+  PtsJ2 := 0;
+  FPrimerCarta := -1;
+  FSegundaCarta := -1;
+
+  if Assigned(OnActualizarUI) then OnActualizarUI(PtsJ1, PtsJ2, Turno);
+
+  GenerarYRevolverCartas(TotalCartas);
+
+  // --- LÓGICA DE ACOMODO AUTOMÁTICO (GRID) ---
+  CalcularGrid(TotalCartas, Cols, Filas);
+
+  Margen := 5; // Margen pequeño entre cartas
+  // Restamos los márgenes totales y dividimos entre el número de piezas para que ocupen TODO
+  AnchoCarta := (FTablero.Width - (Margen * (Cols + 1))) / Cols;
+  AltoCarta := (FTablero.Height - (Margen * (Filas + 1))) / Filas;
+
+  for I := 0 to TotalCartas - 1 do
+  begin
+    F := I div Cols;
+    C := I mod Cols;
+
+    Cartas[I].BotonVisual := TImage.Create(FTablero);
+    Cartas[I].BotonVisual.Parent := FTablero;
+    Cartas[I].BotonVisual.Width := AnchoCarta;
+    Cartas[I].BotonVisual.Height := AltoCarta;
+
+    // Posicionamiento dinámico
+    Cartas[I].BotonVisual.Position.X := Margen + (C * (AnchoCarta + Margen));
+    Cartas[I].BotonVisual.Position.Y := Margen + (F * (AltoCarta + Margen));
+
+    Cartas[I].BotonVisual.Tag := I;
+    Cartas[I].BotonVisual.WrapMode := TImageWrapMode.Stretch; // La imagen se estira al tamaño calculado
+
+    MostrarImagen(I, 0); // Imagen de "atrás"
+    Cartas[I].BotonVisual.OnClick := CartaClickeada;
+  end;
+end;
+
+// ... (Los procedimientos GenerarYRevolverCartas, CartaClickeada,
+//      MostrarImagen y TimerEsperaTick se mantienen igual que en tu código original) ...
+
+procedure TCerebroMemorama.MostrarImagen(CartaIdx, ImgIndex: Integer);
+begin
+  if not Assigned(FListaImagenes) then Exit;
+  if (ImgIndex >= 0) and (ImgIndex < FListaImagenes.Source.Count) then
+  begin
+    Cartas[CartaIdx].BotonVisual.Bitmap.Assign(
+      FListaImagenes.Source.Items[ImgIndex].MultiResBitmap.Items[0].Bitmap
+    );
+  end;
+end;
+
+procedure TCerebroMemorama.GenerarYRevolverCartas(TotalCartas: Integer);
+var I, RndIdx: Integer; Temp: TCartaLogica;
+begin
+  SetLength(Cartas, TotalCartas);
+  for I := 0 to TotalCartas - 1 do
+  begin
+    Cartas[I].IDPareja := I div 2;
+    Cartas[I].Volteada := False;
+    Cartas[I].Encontrada := False;
+  end;
+  Randomize;
+  for I := TotalCartas - 1 downto 1 do
+  begin
+    RndIdx := Random(I + 1);
+    Temp := Cartas[I]; Cartas[I] := Cartas[RndIdx]; Cartas[RndIdx] := Temp;
+  end;
+end;
+
+procedure TCerebroMemorama.CartaClickeada(Sender: TObject);
+var Idx, TotalEncontradas: Integer;
+begin
+  if FTimerEspera.Enabled then Exit;
+  Idx := TImage(Sender).Tag;
+  if Cartas[Idx].Encontrada or Cartas[Idx].Volteada then Exit;
+
+  Cartas[Idx].Volteada := True;
+  MostrarImagen(Idx, Cartas[Idx].IDPareja + 1);
+
+  if FPrimerCarta = -1 then FPrimerCarta := Idx
+  else
+  begin
+    FSegundaCarta := Idx;
+    if Cartas[FPrimerCarta].IDPareja = Cartas[FSegundaCarta].IDPareja then
+    begin
+      Cartas[FPrimerCarta].Encontrada := True;
+      Cartas[FSegundaCarta].Encontrada := True;
+      Cartas[FPrimerCarta].BotonVisual.Opacity := 0.5;
+      Cartas[FSegundaCarta].BotonVisual.Opacity := 0.5;
+      if Turno = 1 then Inc(PtsJ1) else Inc(PtsJ2);
+      FPrimerCarta := -1; FSegundaCarta := -1;
+      if Assigned(OnActualizarUI) then OnActualizarUI(PtsJ1, PtsJ2, Turno);
+
+      TotalEncontradas := PtsJ1 + PtsJ2;
+      if TotalEncontradas = ParesTotales then
+      begin
+        if PtsJ1 > PtsJ2 then ShowMessage('¡Ganó ' + NombreJ1 + '!')
+        else if PtsJ2 > PtsJ1 then ShowMessage('¡Ganó ' + NombreJ2 + '!')
+        else ShowMessage('¡Empate!');
+      end;
+    end
+    else
+    begin
+      Turno := IfThen(Turno = 1, 2, 1);
+      if Assigned(OnActualizarUI) then OnActualizarUI(PtsJ1, PtsJ2, Turno);
+      FTimerEspera.Enabled := True;
+    end;
+  end;
+end;
+
+procedure TCerebroMemorama.TimerEsperaTick(Sender: TObject);
+begin
+  FTimerEspera.Enabled := False;
+  Cartas[FPrimerCarta].Volteada := False;
+  MostrarImagen(FPrimerCarta, 0);
+  Cartas[FSegundaCarta].Volteada := False;
+  MostrarImagen(FSegundaCarta, 0);
+  FPrimerCarta := -1; FSegundaCarta := -1;
+end;
+
+initialization
+  Cerebro := TCerebroMemorama.Create;
+finalization
+  Cerebro.Free;
+end.

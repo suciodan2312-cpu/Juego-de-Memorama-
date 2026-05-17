@@ -1,0 +1,32 @@
+procedure TForm1.FormCreate(Sender: TObject);
+begin
+  Cerebro.OnActualizarUI := ActualizarMarcador;
+
+  // 1. El cerebro llena el ComboBox de número de cartas
+  Cerebro.ConfigurarOpcionesCartas(cmbNoCar);
+
+  // 2. El cerebro escanea la carpeta "Temas" y llena el ComboBox de temáticas
+  Cerebro.ListarTemas(cmbTematica);
+end;
+
+procedure TForm1.btnIniciarClick(Sender: TObject);
+begin
+  // Validamos nombres rápido
+  if (edtJ1.Text = '') or (edtJ2.Text = '') then
+  begin
+    ShowMessage('Pon los nombres de los jugadores');
+    Exit;
+  end;
+
+  // 1. Cargamos las fotos del tema seleccionado al ImageList
+  Cerebro.CargarImagenesDeCarpeta(cmbTematica.Selected.Text, ImageList1);
+
+  // 2. Iniciamos el juego
+  Cerebro.IniciarJuego(
+    cmbNoCar.Selected.Text,
+    lytCartas,
+    ImageList1,
+    edtJ1.Text,
+    edtJ2.Text
+  );
+end;

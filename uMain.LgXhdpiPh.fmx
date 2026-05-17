@@ -1,0 +1,64 @@
+inherited Form1_LgXhdpiPh: TForm1_LgXhdpiPh
+  ClientHeight = 424
+  ClientWidth = 720
+  DesignerMasterStyle = 3
+  inherited lytCartas: TLayout
+    Size.Width = 720.000000000000000000
+    Size.Height = 305.000000000000000000
+  end
+  inherited pnlTop: TPanel
+    Size.Width = 720.000000000000000000
+    inherited edtJ1: TEdit
+      Position.X = 8.000000000000000000
+      Position.Y = 24.000000000000000000
+    end
+    inherited edtJ2: TEdit
+      Position.X = 189.000000000000000000
+      Position.Y = 24.000000000000000000
+    end
+    inherited cmbNoCar: TComboBox
+      Position.X = 344.000000000000000000
+      Position.Y = 24.000000000000000000
+    end
+    inherited cmbTematica: TComboBox
+      Position.X = 560.000000000000000000
+      Position.Y = 24.000000000000000000
+    end
+    inherited Label1: TLabel
+      Position.X = 328.000000000000000000
+      TextSettings.Font.StyleExt = {00070000000000000004000000}
+    end
+    inherited Label3: TLabel
+      Position.X = 560.000000000000000000
+      TextSettings.Font.StyleExt = {00070000000000000004000000}
+    end
+  end
+  inherited pnlBajo: TPanel
+    Position.Y = 369.000000000000000000
+    Size.Width = 720.000000000000000000
+    inherited lblPointsJ1: TLabel
+      StyledSettings = [Family, Style, FontColor]
+      Position.X = 52.000000000000000000
+      Position.Y = 24.000000000000000000
+      TextSettings.Font.Size = 10.000000000000000000
+    end
+    inherited lblTurno: TLabel
+      StyledSettings = [Family, Style, FontColor]
+      Position.X = 560.000000000000000000
+      Position.Y = 24.000000000000000000
+      TextSettings.Font.Size = 10.000000000000000000
+    end
+    inherited Label2: TLabel
+      StyledSettings = [Family, Style, FontColor]
+      Position.X = 204.000000000000000000
+      Position.Y = 24.000000000000000000
+      TextSettings.Font.Size = 10.000000000000000000
+    end
+    inherited btnIniciar: TButton
+      Position.X = 360.000000000000000000
+      Size.Width = 121.000000000000000000
+      Size.Height = 44.000000000000000000
+      Size.PlatformDefault = False
+    end
+  end
+end
