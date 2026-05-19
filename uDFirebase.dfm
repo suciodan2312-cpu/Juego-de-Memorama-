@@ -1,0 +1,24 @@
+object dmFirebase: TdmFirebase
+  Height = 750
+  Width = 1000
+  PixelsPerInch = 120
+  object RESTClient1: TRESTClient
+    BaseURL = 'https://memoramafmx-default-rtdb.firebaseio.com'
+    Params = <>
+    SynchronizedEvents = False
+    Left = 248
+    Top = 216
+  end
+  object RESTRequest1: TRESTRequest
+    Client = RESTClient1
+    Params = <>
+    Response = RESTResponse1
+    SynchronizedEvents = False
+    Left = 400
+    Top = 224
+  end
+  object RESTResponse1: TRESTResponse
+    Left = 560
+    Top = 216
+  end
+end

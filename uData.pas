@@ -38,6 +38,7 @@ type
     PtsJ1, PtsJ2: Integer;
     NombreJ1, NombreJ2: String;
     OnActualizarUI: TActualizarUIEvent;
+    MiRol: Integer;
 
     constructor Create;
     destructor Destroy; override;
@@ -58,6 +59,9 @@ var
   Cerebro: TCerebroMemorama;
 
 implementation
+
+uses
+  uDFirebase;
 
 { TCerebroMemorama }
 
@@ -255,15 +259,20 @@ end;
 procedure TCerebroMemorama.CartaClickeada(Sender: TObject);
 var
   Idx, CantidadCaras, ImgIndex: Integer;
+  StrEnc: string;
+  J: Integer;
 begin
   if FTimerEspera.Enabled then Exit;
+
+  // Bloqueo de turno
+  if Turno <> MiRol then Exit;
+
   Idx := TImage(Sender).Tag;
 
   if Cartas[Idx].Encontrada or Cartas[Idx].Volteada then Exit;
 
   Cartas[Idx].Volteada := True;
 
-  // CORRECCIÓN MATEMÁTICA: Usamos MOD para reciclar imágenes si faltan archivos en la carpeta
   CantidadCaras := FListaImagenes.Source.Count - 1;
   if CantidadCaras > 0 then
     ImgIndex := (Cartas[Idx].IDPareja mod CantidadCaras) + 1
@@ -299,16 +308,47 @@ begin
       FTimerEspera.Enabled := True;
     end;
   end;
+
+  // --- NUEVO: Enviamos a Firebase el estado y las cartas encontradas ---
+  StrEnc := '';
+  for J := 0 to High(Cartas) do
+  begin
+    if Cartas[J].Encontrada then
+      StrEnc := StrEnc + J.ToString + ',';
+  end;
+
+  if Assigned(dmFirebase) then
+    dmFirebase.ActualizarEstadoNube(Turno, PtsJ1, PtsJ2, FPrimerCarta, FSegundaCarta, StrEnc);
 end;
 
 procedure TCerebroMemorama.TimerEsperaTick(Sender: TObject);
+var
+  StrEnc: string;
+  J: Integer;
 begin
   FTimerEspera.Enabled := False;
+
+  // Ocultamos las cartas que no fueron pareja
   Cartas[FPrimerCarta].Volteada := False;
   MostrarImagen(FPrimerCarta, 0);
+
   Cartas[FSegundaCarta].Volteada := False;
   MostrarImagen(FSegundaCarta, 0);
-  FPrimerCarta := -1; FSegundaCarta := -1;
+
+  // Reseteamos la selección
+  FPrimerCarta := -1;
+  FSegundaCarta := -1;
+
+  // --- NUEVO: Enviamos a Firebase el estado y las cartas encontradas ---
+  StrEnc := '';
+  for J := 0 to High(Cartas) do
+  begin
+    if Cartas[J].Encontrada then
+      StrEnc := StrEnc + J.ToString + ',';
+  end;
+
+  if Assigned(dmFirebase) then
+    dmFirebase.ActualizarEstadoNube(Turno, PtsJ1, PtsJ2, FPrimerCarta, FSegundaCarta, StrEnc);
 end;
 
 initialization
