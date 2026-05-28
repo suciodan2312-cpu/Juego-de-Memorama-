@@ -20,17 +20,17 @@ inherited Form1_LgXhdpiPh: TForm1_LgXhdpiPh
       Position.X = 218.000000000000000000
       Position.Y = 24.000000000000000000
     end
-    inherited cmbTematica: TComboBox
-      Position.X = 329.000000000000000000
-      Position.Y = 24.000000000000000000
-    end
-    inherited Label1: TLabel
+    inherited Label1: TLabel [3]
       Position.X = 186.000000000000000000
       TextSettings.Font.StyleExt = {00070000000000000004000000}
     end
-    inherited Label3: TLabel
+    inherited Label3: TLabel [4]
       Position.X = 323.000000000000000000
       TextSettings.Font.StyleExt = {00070000000000000004000000}
+    end
+    inherited cmbTematica: TComboBox [5]
+      Position.X = 329.000000000000000000
+      Position.Y = 24.000000000000000000
     end
   end
   inherited pnlBajo: TPanel
@@ -42,19 +42,13 @@ inherited Form1_LgXhdpiPh: TForm1_LgXhdpiPh
       Position.Y = 24.000000000000000000
       TextSettings.Font.Size = 10.000000000000000000
     end
-    inherited lblTurno: TLabel
-      StyledSettings = [Family, Style, FontColor]
-      Position.X = 361.000000000000000000
-      Position.Y = 24.000000000000000000
-      TextSettings.Font.Size = 10.000000000000000000
-    end
-    inherited Label2: TLabel
+    inherited Label2: TLabel [1]
       StyledSettings = [Family, Style, FontColor]
       Position.X = 98.000000000000000000
       Position.Y = 24.000000000000000000
       TextSettings.Font.Size = 10.000000000000000000
     end
-    inherited btnIniciar: TButton
+    inherited btnIniciar: TButton [2]
       StyledSettings = [Family, Style, FontColor]
       Position.X = 180.000000000000000000
       Size.Width = 77.000000000000000000
@@ -62,12 +56,18 @@ inherited Form1_LgXhdpiPh: TForm1_LgXhdpiPh
       Size.PlatformDefault = False
       TextSettings.Font.Size = 10.000000000000000000
     end
-    inherited btnConectar: TButton
+    inherited btnConectar: TButton [3]
       StyledSettings = [Family, Style, FontColor]
       Position.X = 265.000000000000000000
       Position.Y = 8.000000000000000000
       Size.Width = 88.000000000000000000
       Size.Height = 39.000000000000000000
+      TextSettings.Font.Size = 10.000000000000000000
+    end
+    inherited lblTurno: TLabel [4]
+      StyledSettings = [Family, Style, FontColor]
+      Position.X = 361.000000000000000000
+      Position.Y = 24.000000000000000000
       TextSettings.Font.Size = 10.000000000000000000
     end
   end

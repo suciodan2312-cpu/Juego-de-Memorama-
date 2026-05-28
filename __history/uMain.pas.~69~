@@ -12,54 +12,38 @@ uses
   FMX.DialogService;
 
 type
-  // Formulario principal del juego.
-  // Controla la interfaz visual, botones, conexión a red y sincronización.
   TForm1 = class(TForm)
-    lytCartas: TLayout;           // Contenedor donde se colocan las cartas.
-    btnIniciar: TButton;          // Botón para iniciar partida local o como host.
-    edtJ1: TEdit;                 // Campo para nombre del jugador 1.
-    cmbNoCar: TComboBox;          // Selector de cantidad de cartas.
-    edtJ2: TEdit;                 // Campo para nombre del jugador 2.
-    lblTurno: TLabel;             // Muestra de quién es el turno.
-    lblPointsJ1: TLabel;          // Muestra el marcador de ambos jugadores.
-    Label2: TLabel;               // Label no usado actualmente.
-    pnlTop: TPanel;               // Panel superior con nombres y opciones.
-    pnlBajo: TPanel;              // Panel inferior con botones y marcador.
-    ImageList1: TImageList;       // Lista de imágenes usadas en las cartas.
-    cmbTematica: TComboBox;       // Selector de tema de imágenes.
-    Label1: TLabel;               // Texto de "Selecciona el No de cartas".
-    Label3: TLabel;               // Texto de "Selecciona la Temática".
-    btnConectar: TButton;         // Botón para unirse a una partida existente.
-    TimerSincronizador: TTimer;   // Timer que descarga cambios desde Firebase.
+    lytCartas: TLayout;
+    btnIniciar: TButton;
+    edtJ1: TEdit;
+    cmbNoCar: TComboBox;
+    edtJ2: TEdit;
+    lblTurno: TLabel;
+    lblPointsJ1: TLabel;
+    Label2: TLabel;
+    pnlTop: TPanel;
+    pnlBajo: TPanel;
+    ImageList1: TImageList;
+    cmbTematica: TComboBox;
+    Label1: TLabel;
+    Label3: TLabel;
+    btnConectar: TButton;
+    TimerSincronizador: TTimer;
 
-    // Evento del botón iniciar.
     procedure btnIniciarClick(Sender: TObject);
-
-    // Evento inicial del formulario.
     procedure FormCreate(Sender: TObject);
-
-    // Evento que se dispara al cambiar tamaño u orientación.
     procedure FormResize(Sender: TObject);
-
-    // Evento del botón para unirse a una partida.
     procedure btnConectarClick(Sender: TObject);
-
-    // Evento del timer que sincroniza con Firebase.
     procedure TimerSincronizadorTimer(Sender: TObject);
 
   private
-    // Actualiza textos del marcador y turno.
     procedure ActualizarMarcador(PtsJ1, PtsJ2, TurnoActual: Integer);
-
-    // Acomoda controles según orientación vertical u horizontal.
     procedure AjustarDisenoPorOrientacion;
 
   public
-    // Sección pública del formulario.
   end;
 
 var
-  // Instancia global del formulario principal.
   Form1: TForm1;
 
 implementation
@@ -68,7 +52,6 @@ implementation
 {$R *.LgXhdpiPh.fmx ANDROID}
 {$R *.NmXhdpiPh.fmx ANDROID}
 
-// Configura la pantalla inicial, combos, tamaños y eventos.
 procedure TForm1.FormCreate(Sender: TObject);
 begin
   Cerebro.OnActualizarUI := ActualizarMarcador;
@@ -79,7 +62,7 @@ begin
   Label1.Text := 'Selecciona el No de cartas';
   Label3.Text := 'Selecciona la Temática';
 
-  // Este label ya no lo usamos porque el marcador real es lblPointsJ1.
+  // Este label ya no lo usamos porque el marcador real es lblPointsJ1
   Label2.Visible := False;
 
   pnlTop.Align := TAlignLayout.Top;
@@ -89,7 +72,7 @@ begin
   Self.OnResize := FormResize;
 
   {$IFDEF MSWINDOWS}
-  // En PC hacemos que inicie con buen tamaño.
+  // En PC hacemos que inicie con buen tamaño
   Self.Width := 1200;
   Self.Height := 760;
   Self.Constraints.MinWidth := 1000;
@@ -98,7 +81,7 @@ begin
 
   AjustarDisenoPorOrientacion;
 
-  // Ayuda a corregir tamaños después de que la ventana termina de crearse.
+  // Esto ayuda a que Android/Windows acomode bien después de crear la ventana
   TThread.ForceQueue(nil,
     procedure
     begin
@@ -110,7 +93,6 @@ begin
   );
 end;
 
-// Se ejecuta cuando cambia el tamaño de ventana o cambia la orientación del celular.
 procedure TForm1.FormResize(Sender: TObject);
 begin
   AjustarDisenoPorOrientacion;
@@ -118,7 +100,7 @@ begin
   if Assigned(Cerebro) then
     Cerebro.ReacomodarTablero;
 
-  // En Android, al girar pantalla, las medidas pueden actualizarse con pequeño retraso.
+  // En Android al girar pantalla a veces actualiza medidas después de unos ms
   TThread.ForceQueue(nil,
     procedure
     begin
@@ -130,19 +112,18 @@ begin
   );
 end;
 
-// Acomoda visualmente todos los controles según si está vertical u horizontal.
 procedure TForm1.AjustarDisenoPorOrientacion;
 var
-  EsVertical: Boolean;       // Indica si la pantalla está vertical.
-  Margen: Single;            // Espacio externo entre controles.
-  Gap: Single;               // Separación entre columnas.
-  W: Single;                 // Ancho actual del formulario.
-  ColW: Single;              // Ancho de cada columna.
-  CtrlW: Single;             // Ancho de controles dentro de columnas.
-  BtnW: Single;              // Ancho de botones.
-  BtnGap: Single;            // Separación entre botones.
-  BtnInicioX: Single;        // Posición inicial de botones.
-  X1, X2, X3, X4: Single;    // Posiciones horizontales de las columnas.
+  EsVertical: Boolean;
+  Margen: Single;
+  Gap: Single;
+  W: Single;
+  ColW: Single;
+  CtrlW: Single;
+  BtnW: Single;
+  BtnGap: Single;
+  BtnInicioX: Single;
+  X1, X2, X3, X4: Single;
 begin
   W := Self.Width;
 
@@ -154,7 +135,7 @@ begin
 
   EsVertical := Self.Height > Self.Width;
 
-  // Aseguramos padres correctos.
+  // Aseguramos padres correctos
   edtJ1.Parent := pnlTop;
   edtJ2.Parent := pnlTop;
   Label1.Parent := pnlTop;
@@ -169,7 +150,10 @@ begin
 
   Label2.Visible := False;
 
-  // Diseño vertical para teléfono.
+  // ==========================================================
+  // VERTICAL / TELÉFONO
+  // Este diseño ya te quedó bien, por eso casi no se toca
+  // ==========================================================
   if EsVertical then
   begin
     pnlTop.Height := 145;
@@ -233,10 +217,16 @@ begin
   end
   else
   begin
-    // Diseño horizontal para PC y teléfono.
+    // ==========================================================
+    // HORIZONTAL / PC Y CELULAR
+    // Aquí se corrige el encimado usando columnas automáticas
+    // ==========================================================
+
     pnlTop.Height := 105;
     pnlBajo.Height := 78;
 
+    // Dividimos el panel superior en 4 columnas:
+    // Jugador 1 | Jugador 2 | No. cartas | Temática
     ColW := (W - (Margen * 2) - (Gap * 3)) / 4;
 
     if ColW < 120 then
@@ -252,38 +242,45 @@ begin
     X3 := Margen + ((ColW + Gap) * 2);
     X4 := Margen + ((ColW + Gap) * 3);
 
+    // Jugador 1
     edtJ1.Width := CtrlW;
     edtJ1.Height := 34;
     edtJ1.Position.X := X1 + ((ColW - CtrlW) / 2);
     edtJ1.Position.Y := 47;
 
+    // Jugador 2
     edtJ2.Width := CtrlW;
     edtJ2.Height := 34;
     edtJ2.Position.X := X2 + ((ColW - CtrlW) / 2);
     edtJ2.Position.Y := 47;
 
+    // Label cartas
     Label1.Width := ColW;
     Label1.Height := 24;
     Label1.Position.X := X3;
     Label1.Position.Y := 18;
     Label1.TextSettings.HorzAlign := TTextAlign.Center;
 
+    // Combo cartas
     cmbNoCar.Width := CtrlW;
     cmbNoCar.Height := 34;
     cmbNoCar.Position.X := X3 + ((ColW - CtrlW) / 2);
     cmbNoCar.Position.Y := 47;
 
+    // Label temática
     Label3.Width := ColW;
     Label3.Height := 24;
     Label3.Position.X := X4;
     Label3.Position.Y := 18;
     Label3.TextSettings.HorzAlign := TTextAlign.Center;
 
+    // Combo temática
     cmbTematica.Width := CtrlW;
     cmbTematica.Height := 34;
     cmbTematica.Position.X := X4 + ((ColW - CtrlW) / 2);
     cmbTematica.Position.Y := 47;
 
+    // Botones centrados abajo
     BtnGap := 22;
     BtnW := 170;
 
@@ -302,12 +299,14 @@ begin
     btnConectar.Position.X := BtnInicioX + BtnW + BtnGap;
     btnConectar.Position.Y := 10;
 
+    // Marcador abajo izquierda
     lblPointsJ1.Width := (W / 2) - 40;
     lblPointsJ1.Height := 24;
     lblPointsJ1.Position.X := Margen;
     lblPointsJ1.Position.Y := 50;
     lblPointsJ1.TextSettings.HorzAlign := TTextAlign.Leading;
 
+    // Turno abajo derecha
     lblTurno.Width := (W / 2) - 40;
     lblTurno.Height := 24;
     lblTurno.Position.X := W - lblTurno.Width - Margen;
@@ -316,17 +315,15 @@ begin
   end;
 end;
 
-// Descarga el estado de Firebase y replica los cambios en la interfaz.
 procedure TForm1.TimerSincronizadorTimer(Sender: TObject);
 var
-  JSONStr: string;             // JSON descargado desde Firebase.
-  ConfigObj: TJSONObject;      // Objeto JSON parseado.
-  NubeTurno, NubePtsJ1, NubePtsJ2: Integer; // Estado de turno y puntos.
-  NubeCarta1, NubeCarta2: Integer;          // Cartas activas en la nube.
-  CantidadCaras, ImgIndex, CardIdx, I: Integer; // Variables para recorrer cartas.
-  StrEnc, StrDuenos: string;    // Textos de cartas encontradas y dueños.
-  ArrEnc, ArrDuenos, Partes: TArray<string>; // Arreglos separados desde CSV.
-  Duenio: Integer;              // Jugador dueño de una carta encontrada.
+  JSONStr: string;
+  ConfigObj: TJSONObject;
+  NubeTurno, NubePtsJ1, NubePtsJ2, NubeCarta1, NubeCarta2: Integer;
+  CantidadCaras, ImgIndex, CardIdx, I: Integer;
+  StrEnc, StrDuenos: string;
+  ArrEnc, ArrDuenos, Partes: TArray<string>;
+  Duenio: Integer;
 begin
   if Cerebro.EsModoLocal then
   begin
@@ -388,7 +385,7 @@ begin
 
       Cerebro.VerificarFinDeJuego;
 
-      // Leer cartas encontradas.
+      // Leer cartas encontradas
       if ConfigObj.GetValue('encontradas') <> nil then
       begin
         StrEnc := ConfigObj.GetValue('encontradas').Value;
@@ -417,7 +414,7 @@ begin
         end;
       end;
 
-      // Leer dueño de cada carta encontrada.
+      // Leer dueño de cada carta encontrada
       if ConfigObj.GetValue('duenosPares') <> nil then
       begin
         StrDuenos := ConfigObj.GetValue('duenosPares').Value;
@@ -441,7 +438,7 @@ begin
         end;
       end;
 
-      // Replica cartas activas en vivo.
+      // Replicar cartas activas en vivo
       CantidadCaras := ImageList1.Source.Count - 1;
 
       for I := 0 to High(Cerebro.Cartas) do
@@ -493,7 +490,6 @@ begin
   Cerebro.VerificarFinDeJuego;
 end;
 
-// Inicia partida local o crea una partida en red como host.
 procedure TForm1.btnIniciarClick(Sender: TObject);
 begin
   TDialogService.MessageDialog(
@@ -505,9 +501,9 @@ begin
     0,
     procedure(const AResult: TModalResult)
     var
-      ConfigObj: TJSONObject; // JSON inicial de la partida.
-      OrdenArr: TJSONArray;   // Orden de las cartas para sincronizar ambos jugadores.
-      I: Integer;             // Recorre las cartas para guardar su orden.
+      ConfigObj: TJSONObject;
+      OrdenArr: TJSONArray;
+      I: Integer;
     begin
       if AResult = mrYes then
       begin
@@ -579,13 +575,12 @@ begin
   );
 end;
 
-// Permite que el jugador 2 se una a una partida existente en Firebase.
 procedure TForm1.btnConectarClick(Sender: TObject);
 var
-  JSONStr: string;          // JSON descargado con la configuración de la partida.
-  ConfigObj: TJSONObject;   // Objeto JSON parseado.
-  OrdenArr: TJSONArray;     // Orden de cartas recibido desde Firebase.
-  I: Integer;               // Recorre el arreglo de cartas.
+  JSONStr: string;
+  ConfigObj: TJSONObject;
+  OrdenArr: TJSONArray;
+  I: Integer;
 begin
   Cerebro.EsModoLocal := False;
 
@@ -636,7 +631,6 @@ begin
   Cerebro.MiRol := 2;
 end;
 
-// Actualiza el marcador y el texto de turno en pantalla.
 procedure TForm1.ActualizarMarcador(PtsJ1, PtsJ2, TurnoActual: Integer);
 begin
   lblPointsJ1.Text :=

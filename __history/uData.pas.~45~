@@ -9,98 +9,63 @@ uses
   System.IOUtils, FMX.StdCtrls;
 
 type
-  // Representa la información lógica y visual de una carta del memorama.
   TCartaLogica = record
-    IDPareja: Integer;          // Identificador usado para saber con qué carta hace par.
-    Volteada: Boolean;          // Indica si la carta está actualmente volteada.
-    Encontrada: Boolean;        // Indica si el par ya fue encontrado.
-    DuenioPar: Integer;         // 0 = nadie, 1 = jugador 1, 2 = jugador 2.
-    BotonVisual: TImage;        // Imagen visual que se muestra en el tablero.
+    IDPareja: Integer;
+    Volteada: Boolean;
+    Encontrada: Boolean;
+    DuenioPar: Integer;       // 0 = nadie, 1 = jugador 1, 2 = jugador 2
+    BotonVisual: TImage;
 
-    MarcaFondo: TRectangle;     // Fondo de la marca que indica quién encontró el par.
-    MarcaVisual: TLabel;        // Texto de la marca, por ejemplo: "✓ jugador".
+    MarcaFondo: TRectangle;   // Fondo de la marca
+    MarcaVisual: TLabel;      // Texto de la marca
   end;
 
-  // Evento usado para actualizar el marcador en la interfaz principal.
   TActualizarUIEvent = procedure(PtsJ1, PtsJ2, TurnoActual: Integer) of object;
 
-  // Clase principal del cerebro del juego.
-  // Controla cartas, turnos, puntos, pares encontrados y reacomodo visual.
   TCerebroMemorama = class
   private
-    FTablero: TLayout;                 // Contenedor donde se dibujan las cartas.
-    FListaImagenes: TCustomImageList;  // Lista de imágenes cargadas para el tema actual.
-    FTimerEspera: TTimer;              // Timer para esperar antes de ocultar cartas incorrectas.
+    FTablero: TLayout;
+    FListaImagenes: TCustomImageList;
+    FTimerEspera: TTimer;
 
-    // Genera las cartas por pares y las revuelve aleatoriamente.
     procedure GenerarYRevolverCartas(TotalCartas: Integer);
-
-    // Evento que se ejecuta cuando el jugador toca o da clic a una carta.
     procedure CartaClickeada(Sender: TObject);
-
-    // Se ejecuta después de fallar un par para volver a ocultar las cartas.
     procedure TimerEsperaTick(Sender: TObject);
-
-    // Muestra una imagen específica en una carta.
     procedure MostrarImagen(CartaIdx, ImgIndex: Integer);
 
-    // Calcula cuántas columnas y filas convienen según el tamaño del tablero.
     procedure CalcularGrid(Total: Integer; out Cols, Filas: Integer);
-
-    // Crea la etiqueta visual que se mostrará cuando una carta sea encontrada.
     procedure CrearMarcaCarta(CartaIdx: Integer);
-
-    // Muestra el nombre del jugador que encontró una carta/par.
     procedure MostrarMarcaGanador(CartaIdx, Duenio: Integer);
-
-    // Ajusta tamaño y posición de la marca de una carta al reacomodar el tablero.
     procedure AjustarMarcaCarta(CartaIdx: Integer);
 
   public
-    Cartas: array of TCartaLogica; // Arreglo principal con todas las cartas del juego.
+    Cartas: array of TCartaLogica;
 
-    FPrimerCarta, FSegundaCarta: Integer; // Índices de las dos cartas seleccionadas.
+    FPrimerCarta, FSegundaCarta: Integer;
 
-    ParesTotales: Integer;       // Total de pares que debe encontrar el jugador.
-    Turno: Integer;              // Turno actual: 1 = jugador 1, 2 = jugador 2.
-    PtsJ1, PtsJ2: Integer;       // Puntos de jugador 1 y jugador 2.
-    NombreJ1, NombreJ2: String;  // Nombres de los jugadores.
-    OnActualizarUI: TActualizarUIEvent; // Evento para actualizar marcador en uMain.
-    MiRol: Integer;              // Rol del jugador en red: 1 = host, 2 = invitado.
-    EsModoLocal: Boolean;        // True si juegan en el mismo dispositivo.
-    JuegoTerminado: Boolean;     // Evita mostrar varias veces el mensaje final.
+    ParesTotales: Integer;
+    Turno: Integer;
+    PtsJ1, PtsJ2: Integer;
+    NombreJ1, NombreJ2: String;
+    OnActualizarUI: TActualizarUIEvent;
+    MiRol: Integer;
+    EsModoLocal: Boolean;
+    JuegoTerminado: Boolean;
 
-    // Constructor: inicializa el timer y valores base.
     constructor Create;
-
-    // Destructor: libera el timer.
     destructor Destroy; override;
 
-    // Llena el ComboBox con las cantidades de cartas disponibles.
     procedure ConfigurarOpcionesCartas(AComboBox: TComboBox);
-
-    // Busca las carpetas de temas disponibles y las muestra en el ComboBox.
     procedure ListarTemas(AComboBox: TComboBox);
-
-    // Carga las imágenes de un tema específico dentro del ImageList.
     procedure CargarImagenesDeCarpeta(NombreTema: String; AImageList: TImageList);
-
-    // Revisa si ya terminó la partida y muestra el resultado final.
     procedure VerificarFinDeJuego;
 
-    // Marca una carta como encontrada y muestra quién la encontró.
     procedure AplicarParEncontrado(CartaIdx, Duenio: Integer);
-
-    // Devuelve en formato texto las cartas encontradas para subirlas a Firebase.
     function ObtenerEncontradasCSV: string;
-
-    // Devuelve en formato texto qué jugador encontró cada carta/par.
     function ObtenerDuenosParesCSV: string;
 
-    // Reacomoda cartas y marcas según el tamaño actual del tablero.
     procedure ReacomodarTablero;
 
-    // Inicia una nueva partida creando cartas, imágenes, turnos y puntos.
     procedure IniciarJuego(
       TextoCantCartas: String;
       ContenedorVisual: TLayout;
@@ -110,7 +75,6 @@ type
   end;
 
 var
-  // Instancia global del cerebro del juego.
   Cerebro: TCerebroMemorama;
 
 implementation
@@ -118,7 +82,6 @@ implementation
 uses
   uDFirebase;
 
-// Crea el timer usado cuando el jugador falla un par.
 constructor TCerebroMemorama.Create;
 begin
   FTimerEspera := TTimer.Create(nil);
@@ -130,14 +93,12 @@ begin
   JuegoTerminado := False;
 end;
 
-// Libera recursos creados por la clase.
 destructor TCerebroMemorama.Destroy;
 begin
   FTimerEspera.Free;
   inherited;
 end;
 
-// Configura las opciones de cantidad de cartas.
 procedure TCerebroMemorama.ConfigurarOpcionesCartas(AComboBox: TComboBox);
 begin
   AComboBox.Items.Clear;
@@ -147,15 +108,14 @@ begin
   AComboBox.Items.Add('18');
   AComboBox.Items.Add('20');
 
-  AComboBox.ItemIndex := 2; // Por defecto 16 cartas.
+  AComboBox.ItemIndex := 2; // Por defecto 16
 end;
 
-// Busca las carpetas dentro de "Temas" y las carga al ComboBox.
 procedure TCerebroMemorama.ListarTemas(AComboBox: TComboBox);
 var
-  RutaBase, RutaTemas: string;   // Rutas base donde se buscan los temas.
-  Carpetas: TStringDynArray;     // Lista de carpetas encontradas.
-  Carpeta: string;               // Carpeta actual del ciclo.
+  RutaBase, RutaTemas: string;
+  Carpetas: TStringDynArray;
+  Carpeta: string;
 begin
   AComboBox.Items.Clear;
 
@@ -179,14 +139,13 @@ begin
   end;
 end;
 
-// Carga reverso.png como imagen oculta y las demás imágenes como caras de cartas.
 procedure TCerebroMemorama.CargarImagenesDeCarpeta(NombreTema: String; AImageList: TImageList);
 var
-  RutaBase, RutaTema, Archivo, NombreArchivo: string; // Rutas y nombres de archivos.
-  Archivos: TStringDynArray;                          // Lista de imágenes PNG.
-  SourceItem: TCustomSourceItem;                      // Elemento agregado al ImageList.
-  RutaReverso: string;                                // Ruta de reverso.png.
-  ListaCaras: TStringList;                            // Imágenes que serán caras de cartas.
+  RutaBase, RutaTema, Archivo, NombreArchivo: string;
+  Archivos: TStringDynArray;
+  SourceItem: TCustomSourceItem;
+  RutaReverso: string;
+  ListaCaras: TStringList;
 begin
   AImageList.Source.Clear;
 
@@ -232,13 +191,11 @@ begin
   end;
 end;
 
-// Calcula la mejor distribución de filas y columnas según la proporción del tablero.
 procedure TCerebroMemorama.CalcularGrid(Total: Integer; out Cols, Filas: Integer);
 var
-  CandidatoCols, CandidatoFilas: Integer; // Posible combinación de columnas y filas.
-  MejorCols, MejorFilas: Integer;         // Mejor combinación encontrada.
-  RelacionTablero, RelacionGrid: Single;  // Proporción del tablero y del grid.
-  Diferencia, MejorDiferencia: Single;    // Comparación para elegir mejor acomodo.
+  CandidatoCols, CandidatoFilas: Integer;
+  MejorCols, MejorFilas: Integer;
+  RelacionTablero, RelacionGrid, Diferencia, MejorDiferencia: Single;
 begin
   Cols := 1;
   Filas := Total;
@@ -279,7 +236,6 @@ begin
   Filas := MejorFilas;
 end;
 
-// Crea el fondo y texto de la marca que irá sobre las cartas encontradas.
 procedure TCerebroMemorama.CrearMarcaCarta(CartaIdx: Integer);
 begin
   Cartas[CartaIdx].MarcaFondo := TRectangle.Create(FTablero);
@@ -317,10 +273,9 @@ begin
   Cartas[CartaIdx].MarcaFondo.BringToFront;
 end;
 
-// Ajusta la marca para que conserve buen tamaño aunque cambie la orientación.
 procedure TCerebroMemorama.AjustarMarcaCarta(CartaIdx: Integer);
 var
-  BadgeW, BadgeH, FontSize: Single; // Tamaño del fondo y letra de la marca.
+  BadgeW, BadgeH, FontSize: Single;
 begin
   if (CartaIdx < 0) or (CartaIdx > High(Cartas)) then
     Exit;
@@ -371,10 +326,9 @@ begin
   Cartas[CartaIdx].MarcaFondo.BringToFront;
 end;
 
-// Muestra una marca azul o roja dependiendo de quién encontró el par.
 procedure TCerebroMemorama.MostrarMarcaGanador(CartaIdx, Duenio: Integer);
 var
-  Nombre: string; // Nombre del jugador que encontró el par.
+  Nombre: string;
 begin
   if (CartaIdx < 0) or (CartaIdx > High(Cartas)) then
     Exit;
@@ -417,7 +371,6 @@ begin
   end;
 end;
 
-// Marca una carta como encontrada, la deja transparente y muestra su dueño.
 procedure TCerebroMemorama.AplicarParEncontrado(CartaIdx, Duenio: Integer);
 begin
   if (CartaIdx < 0) or (CartaIdx > High(Cartas)) then
@@ -433,10 +386,9 @@ begin
   MostrarMarcaGanador(CartaIdx, Duenio);
 end;
 
-// Convierte las cartas encontradas en un texto CSV para enviarlo a Firebase.
 function TCerebroMemorama.ObtenerEncontradasCSV: string;
 var
-  J: Integer; // Recorre todas las cartas.
+  J: Integer;
 begin
   Result := '';
 
@@ -447,10 +399,9 @@ begin
   end;
 end;
 
-// Convierte el dueño de cada carta encontrada en texto para Firebase.
 function TCerebroMemorama.ObtenerDuenosParesCSV: string;
 var
-  J: Integer; // Recorre todas las cartas.
+  J: Integer;
 begin
   Result := '';
 
@@ -461,11 +412,10 @@ begin
   end;
 end;
 
-// Reacomoda todas las cartas según el espacio disponible.
 procedure TCerebroMemorama.ReacomodarTablero;
 var
-  TotalCartas, Cols, Filas, I, C, F: Integer; // Datos del grid y posición.
-  Margen, AnchoCarta, AltoCarta: Single;      // Medidas visuales de cada carta.
+  TotalCartas, Cols, Filas, I, C, F: Integer;
+  Margen, AnchoCarta, AltoCarta: Single;
 begin
   if not Assigned(FTablero) then
     Exit;
@@ -506,11 +456,10 @@ begin
   end;
 end;
 
-// Inicializa una partida nueva: nombres, puntos, cartas, imágenes y tablero.
 procedure TCerebroMemorama.IniciarJuego(TextoCantCartas: String; ContenedorVisual: TLayout;
   ListaImagenes: TCustomImageList; J1, J2: String);
 var
-  TotalCartas, I: Integer; // Cantidad de cartas y contador.
+  TotalCartas, I: Integer;
 begin
   NombreJ1 := J1;
 
@@ -557,7 +506,6 @@ begin
   ReacomodarTablero;
 end;
 
-// Asigna una imagen del ImageList a una carta específica.
 procedure TCerebroMemorama.MostrarImagen(CartaIdx, ImgIndex: Integer);
 begin
   if not Assigned(FListaImagenes) then
@@ -574,11 +522,10 @@ begin
   );
 end;
 
-// Crea las parejas de cartas y las revuelve aleatoriamente.
 procedure TCerebroMemorama.GenerarYRevolverCartas(TotalCartas: Integer);
 var
-  I, RndIdx: Integer;  // Índices usados para crear y revolver cartas.
-  Temp: TCartaLogica;  // Variable temporal para intercambiar cartas.
+  I, RndIdx: Integer;
+  Temp: TCartaLogica;
 begin
   SetLength(Cartas, TotalCartas);
 
@@ -604,11 +551,10 @@ begin
   end;
 end;
 
-// Verifica si todos los pares fueron encontrados y muestra el resultado final.
 procedure TCerebroMemorama.VerificarFinDeJuego;
 var
-  MsgText: string;      // Mensaje final que se mostrará al usuario.
-  Diferencia: Integer;  // Diferencia de puntos entre jugadores.
+  MsgText: string;
+  Diferencia: Integer;
 begin
   if JuegoTerminado or ((PtsJ1 + PtsJ2) <> ParesTotales) then
     Exit;
@@ -657,12 +603,11 @@ begin
   end;
 end;
 
-// Controla la lógica cuando el usuario selecciona una carta.
 procedure TCerebroMemorama.CartaClickeada(Sender: TObject);
 var
-  Idx, CantidadCaras, ImgIndex: Integer; // Carta seleccionada e imagen a mostrar.
-  StrEnc, StrDuenos: string;             // Datos que se enviarán a Firebase.
-  UltimoParEncontrado: Boolean;          // Indica si el clic completó un par.
+  Idx, CantidadCaras, ImgIndex: Integer;
+  StrEnc, StrDuenos: string;
+  UltimoParEncontrado: Boolean;
 begin
   if FTimerEspera.Enabled then
     Exit;
@@ -753,10 +698,9 @@ begin
   end;
 end;
 
-// Oculta las dos cartas si no hicieron par después del tiempo de espera.
 procedure TCerebroMemorama.TimerEsperaTick(Sender: TObject);
 var
-  StrEnc, StrDuenos: string; // Datos actualizados para Firebase.
+  StrEnc, StrDuenos: string;
 begin
   FTimerEspera.Enabled := False;
 
@@ -794,11 +738,9 @@ begin
 end;
 
 initialization
-  // Se crea el cerebro del juego al iniciar la unidad.
   Cerebro := TCerebroMemorama.Create;
 
 finalization
-  // Se libera el cerebro del juego al cerrar la aplicación.
   Cerebro.Free;
 
 end.
