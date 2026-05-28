@@ -1,0 +1,124 @@
+unit uDFirebase;
+
+interface
+
+uses
+  System.SysUtils, System.Classes, REST.Types, REST.Client,
+  Data.Bind.Components, Data.Bind.ObjectScope, System.JSON;
+
+type
+  // Módulo de datos centralizado para el empaquetado e intercambio de paquetes JSON de red [cite: 156]
+  TdmFirebase = class(TDataModule)
+    RESTClient1: TRESTClient;     // Contiene la URL base de tu Realtime Database de Firebase
+    RESTRequest1: TRESTRequest;   // Configura los parámetros, recursos (.json) y verbos HTTP (GET, PUT, PATCH)
+    RESTResponse1: TRESTResponse; // Captura las cadenas de texto JSON devueltas por el servidor
+  private
+  public
+    procedure ProbarConexion;
+    procedure SubirInicioJuego(const ConfigJSON: string);
+    function DescargarPartida: string;
+    procedure ActualizarEstadoNube(TurnoActual, Puntos1, Puntos2, Carta1, Carta2: Integer; const Encontradas: string);
+    procedure SubirNombreJ2(Nombre: string);
+  end;
+
+var
+  dmFirebase: TdmFirebase;
+
+implementation
+
+{%CLASSGROUP 'FMX.Controls.TControl'}
+{$R *.dfm}
+
+function TdmFirebase.DescargarPartida: string;
+begin
+  // OBJETIVO: Realizar la descarga del estado actual de la partida desde Firebase Realtime Database
+  // utilizando el verbo HTTP GET sobre el recurso 'PartidaActual.json' para la sincronización asíncrona[cite: 170, 182].
+
+  RESTRequest1.Resource := 'PartidaActual.json';
+  RESTRequest1.Method := rmGET; // Verbo GET: Utilizado exclusivamente para lectura/descarga de datos
+
+  RESTRequest1.ClearBody;
+  RESTRequest1.Execute;
+
+  Result := RESTResponse1.Content; // Retorna el cuerpo JSON puro descargado
+end;
+
+procedure TdmFirebase.ProbarConexion;
+begin
+  // OBJETIVO: Verificar la comunicación activa y la correcta configuración de red con el nodo
+  // remoto escribiendo un paquete JSON plano de prueba mediante el método HTTP PUT.
+
+  RESTRequest1.Resource := 'Prueba.json';
+  RESTRequest1.Method := rmPUT; // Verbo PUT: Sobrescribe por completo el nodo especificado
+
+  RESTRequest1.ClearBody;
+  RESTRequest1.AddBody('{"Mensaje": "Hola desde Delphi FMX", "Estado": "Conectado"}',
+                        ctAPPLICATION_JSON);
+
+  RESTRequest1.Execute;
+end;
+
+procedure TdmFirebase.SubirInicioJuego(const ConfigJSON: string);
+begin
+  // OBJETIVO: Inicializar los parámetros centrales de la sesión en la nube (Host). Sobrescribe
+  // el nodo 'PartidaActual.json' usando HTTP PUT reemplazando de raíz cualquier estructura previa[cite: 175].
+
+  RESTRequest1.Resource := 'PartidaActual.json';
+  RESTRequest1.Method := rmPUT; // PUT: Reemplaza toda la estructura previa con los datos de la nueva partida
+
+  RESTRequest1.ClearBody;
+  RESTRequest1.AddBody(ConfigJSON, ctAPPLICATION_JSON);
+
+  RESTRequest1.Execute;
+end;
+
+procedure TdmFirebase.ActualizarEstadoNube(TurnoActual, Puntos1, Puntos2, Carta1, Carta2: Integer; const Encontradas: string);
+var
+  EstadoObj: TJSONObject;
+begin
+  // OBJETIVO: Enviar actualizaciones parciales interactivas en tiempo real durante cada turno.
+  // Utiliza el método HTTP PATCH para modificar únicamente los contadores de puntos, las posiciones
+  // de las dos cartas activas y la cadena de pares acumulados resueltos[cite: 252].
+
+  RESTRequest1.Resource := 'PartidaActual.json';
+  RESTRequest1.Method := rmPATCH; // Verbo PATCH: Modificación parcial (solo altera los campos enviados, respetando los demás)
+
+  EstadoObj := TJSONObject.Create;
+  try
+    EstadoObj.AddPair('turno', TJSONNumber.Create(TurnoActual));
+    EstadoObj.AddPair('puntosJ1', TJSONNumber.Create(Puntos1));
+    EstadoObj.AddPair('puntosJ2', TJSONNumber.Create(Puntos2));
+    EstadoObj.AddPair('carta1', TJSONNumber.Create(Carta1));
+    EstadoObj.AddPair('carta2', TJSONNumber.Create(Carta2));
+    EstadoObj.AddPair('encontradas', Encontradas); // Cadena con los índices acumulados resueltos
+
+    RESTRequest1.ClearBody;
+    RESTRequest1.AddBody(EstadoObj.ToString, ctAPPLICATION_JSON);
+    RESTRequest1.Execute;
+  finally
+    EstadoObj.Free;
+  end;
+end;
+
+procedure TdmFirebase.SubirNombreJ2(Nombre: string);
+var
+  Obj: TJSONObject;
+begin
+  // OBJETIVO: Registrar al Jugador 2 (Invitado) en la sesión existente. Realiza una modificación
+  // parcial vía HTTP PATCH acoplando el nombre ingresado localmente al JSON de red sin comprometer
+  // ni borrar los datos de configuración previamente cargados por el Host[cite: 180].
+
+  RESTRequest1.Resource := 'PartidaActual.json';
+  RESTRequest1.Method := rmPATCH; // PATCH: Agrega al Jugador 2 sin comprometer la configuración previa establecida por el Host
+  Obj := TJSONObject.Create;
+  try
+    Obj.AddPair('j2', Nombre);
+    RESTRequest1.ClearBody;
+    RESTRequest1.AddBody(Obj.ToString, ctAPPLICATION_JSON);
+    RESTRequest1.Execute;
+  finally
+    Obj.Free;
+  end;
+end;
+
+end.
