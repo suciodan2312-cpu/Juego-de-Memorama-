@@ -1,0 +1,74 @@
+inherited Form1_LgXhdpiPh: TForm1_LgXhdpiPh
+  ClientHeight = 696
+  ClientWidth = 448
+  DesignerMasterStyle = 3
+  inherited lytCartas: TLayout
+    Size.Width = 448.000000000000000000
+    Size.Height = 577.000000000000000000
+  end
+  inherited pnlTop: TPanel
+    Size.Width = 448.000000000000000000
+    inherited edtJ1: TEdit
+      Position.X = 8.000000000000000000
+      Position.Y = 24.000000000000000000
+    end
+    inherited edtJ2: TEdit
+      Position.X = 113.000000000000000000
+      Position.Y = 24.000000000000000000
+    end
+    inherited cmbNoCar: TComboBox
+      Position.X = 218.000000000000000000
+      Position.Y = 24.000000000000000000
+    end
+    inherited Label1: TLabel [3]
+      Position.X = 186.000000000000000000
+      TextSettings.Font.StyleExt = {00070000000000000004000000}
+    end
+    inherited Label3: TLabel [4]
+      Position.X = 323.000000000000000000
+      TextSettings.Font.StyleExt = {00070000000000000004000000}
+    end
+    inherited cmbTematica: TComboBox [5]
+      Position.X = 329.000000000000000000
+      Position.Y = 24.000000000000000000
+    end
+  end
+  inherited pnlBajo: TPanel
+    Position.Y = 641.000000000000000000
+    Size.Width = 448.000000000000000000
+    inherited lblPointsJ1: TLabel
+      StyledSettings = [Family, Style, FontColor]
+      Position.X = 8.000000000000000000
+      Position.Y = 24.000000000000000000
+      TextSettings.Font.Size = 10.000000000000000000
+    end
+    inherited Label2: TLabel [1]
+      StyledSettings = [Family, Style, FontColor]
+      Position.X = 98.000000000000000000
+      Position.Y = 24.000000000000000000
+      TextSettings.Font.Size = 10.000000000000000000
+    end
+    inherited btnIniciar: TButton [2]
+      StyledSettings = [Family, Style, FontColor]
+      Position.X = 180.000000000000000000
+      Size.Width = 77.000000000000000000
+      Size.Height = 44.000000000000000000
+      Size.PlatformDefault = False
+      TextSettings.Font.Size = 10.000000000000000000
+    end
+    inherited btnConectar: TButton [3]
+      StyledSettings = [Family, Style, FontColor]
+      Position.X = 265.000000000000000000
+      Position.Y = 8.000000000000000000
+      Size.Width = 88.000000000000000000
+      Size.Height = 39.000000000000000000
+      TextSettings.Font.Size = 10.000000000000000000
+    end
+    inherited lblTurno: TLabel [4]
+      StyledSettings = [Family, Style, FontColor]
+      Position.X = 361.000000000000000000
+      Position.Y = 24.000000000000000000
+      TextSettings.Font.Size = 10.000000000000000000
+    end
+  end
+end

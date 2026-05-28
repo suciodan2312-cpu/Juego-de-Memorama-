@@ -16,7 +16,7 @@ type
     DuenioPar: Integer;       // 0 = nadie, 1 = jugador 1, 2 = jugador 2
     BotonVisual: TImage;
 
-    MarcaFondo: TRectangle;   // Fondo tipo etiqueta
+    MarcaFondo: TRectangle;   // Fondo de la marca
     MarcaVisual: TLabel;      // Texto de la marca
   end;
 
@@ -32,10 +32,11 @@ type
     procedure CartaClickeada(Sender: TObject);
     procedure TimerEsperaTick(Sender: TObject);
     procedure MostrarImagen(CartaIdx, ImgIndex: Integer);
-    procedure CalcularGrid(Total: Integer; out Cols, Filas: Integer);
 
+    procedure CalcularGrid(Total: Integer; out Cols, Filas: Integer);
     procedure CrearMarcaCarta(CartaIdx: Integer);
     procedure MostrarMarcaGanador(CartaIdx, Duenio: Integer);
+    procedure AjustarMarcaCarta(CartaIdx: Integer);
 
   public
     Cartas: array of TCartaLogica;
@@ -62,6 +63,8 @@ type
     procedure AplicarParEncontrado(CartaIdx, Duenio: Integer);
     function ObtenerEncontradasCSV: string;
     function ObtenerDuenosParesCSV: string;
+
+    procedure ReacomodarTablero;
 
     procedure IniciarJuego(
       TextoCantCartas: String;
@@ -99,12 +102,13 @@ end;
 procedure TCerebroMemorama.ConfigurarOpcionesCartas(AComboBox: TComboBox);
 begin
   AComboBox.Items.Clear;
-  AComboBox.Items.Add('4');
-  AComboBox.Items.Add('8');
   AComboBox.Items.Add('12');
+  AComboBox.Items.Add('14');
   AComboBox.Items.Add('16');
+  AComboBox.Items.Add('18');
   AComboBox.Items.Add('20');
-  AComboBox.ItemIndex := 1;
+
+  AComboBox.ItemIndex := 2; // Por defecto 16
 end;
 
 procedure TCerebroMemorama.ListarTemas(AComboBox: TComboBox);
@@ -188,40 +192,54 @@ begin
 end;
 
 procedure TCerebroMemorama.CalcularGrid(Total: Integer; out Cols, Filas: Integer);
+var
+  CandidatoCols, CandidatoFilas: Integer;
+  MejorCols, MejorFilas: Integer;
+  RelacionTablero, RelacionGrid, Diferencia, MejorDiferencia: Single;
 begin
-  Cols := Ceil(Sqrt(Total));
+  Cols := 1;
+  Filas := Total;
 
-  while (Total mod Cols <> 0) do
-    Inc(Cols);
+  if Total <= 0 then
+    Exit;
 
-  Filas := Total div Cols;
+  if not Assigned(FTablero) then
+    Exit;
 
-  if (FTablero.Width > FTablero.Height) and (Filas > Cols) then
+  if (FTablero.Width <= 0) or (FTablero.Height <= 0) then
+    Exit;
+
+  RelacionTablero := FTablero.Width / FTablero.Height;
+
+  MejorCols := 1;
+  MejorFilas := Total;
+  MejorDiferencia := 999999999;
+
+  for CandidatoCols := 1 to Total do
   begin
-    Total := Cols;
-    Cols := Filas;
-    Filas := Total;
+    if (Total mod CandidatoCols) = 0 then
+    begin
+      CandidatoFilas := Total div CandidatoCols;
+      RelacionGrid := CandidatoCols / CandidatoFilas;
+      Diferencia := Abs(RelacionGrid - RelacionTablero);
+
+      if Diferencia < MejorDiferencia then
+      begin
+        MejorDiferencia := Diferencia;
+        MejorCols := CandidatoCols;
+        MejorFilas := CandidatoFilas;
+      end;
+    end;
   end;
+
+  Cols := MejorCols;
+  Filas := MejorFilas;
 end;
 
 procedure TCerebroMemorama.CrearMarcaCarta(CartaIdx: Integer);
 begin
-  // Fondo tipo etiqueta/pastilla
   Cartas[CartaIdx].MarcaFondo := TRectangle.Create(FTablero);
   Cartas[CartaIdx].MarcaFondo.Parent := FTablero;
-
-  Cartas[CartaIdx].MarcaFondo.Width := Cartas[CartaIdx].BotonVisual.Width * 0.65;
-  Cartas[CartaIdx].MarcaFondo.Height := 32;
-
-  Cartas[CartaIdx].MarcaFondo.Position.X :=
-    Cartas[CartaIdx].BotonVisual.Position.X +
-    ((Cartas[CartaIdx].BotonVisual.Width - Cartas[CartaIdx].MarcaFondo.Width) / 2);
-
-  Cartas[CartaIdx].MarcaFondo.Position.Y :=
-    Cartas[CartaIdx].BotonVisual.Position.Y + 8;
-
-  Cartas[CartaIdx].MarcaFondo.XRadius := 12;
-  Cartas[CartaIdx].MarcaFondo.YRadius := 12;
 
   Cartas[CartaIdx].MarcaFondo.Fill.Kind := TBrushKind.Solid;
   Cartas[CartaIdx].MarcaFondo.Fill.Color := TAlphaColors.Black;
@@ -234,7 +252,6 @@ begin
   Cartas[CartaIdx].MarcaFondo.Visible := False;
   Cartas[CartaIdx].MarcaFondo.HitTest := False;
 
-  // Texto encima del fondo
   Cartas[CartaIdx].MarcaVisual := TLabel.Create(Cartas[CartaIdx].MarcaFondo);
   Cartas[CartaIdx].MarcaVisual.Parent := Cartas[CartaIdx].MarcaFondo;
 
@@ -249,9 +266,62 @@ begin
 
   Cartas[CartaIdx].MarcaVisual.TextSettings.HorzAlign := TTextAlign.Center;
   Cartas[CartaIdx].MarcaVisual.TextSettings.VertAlign := TTextAlign.Center;
-  Cartas[CartaIdx].MarcaVisual.TextSettings.Font.Size := 15;
+  Cartas[CartaIdx].MarcaVisual.TextSettings.Font.Size := 14;
   Cartas[CartaIdx].MarcaVisual.TextSettings.Font.Style := [TFontStyle.fsBold];
   Cartas[CartaIdx].MarcaVisual.TextSettings.FontColor := TAlphaColors.White;
+
+  Cartas[CartaIdx].MarcaFondo.BringToFront;
+end;
+
+procedure TCerebroMemorama.AjustarMarcaCarta(CartaIdx: Integer);
+var
+  BadgeW, BadgeH, FontSize: Single;
+begin
+  if (CartaIdx < 0) or (CartaIdx > High(Cartas)) then
+    Exit;
+
+  if not Assigned(Cartas[CartaIdx].BotonVisual) then
+    Exit;
+
+  if not Assigned(Cartas[CartaIdx].MarcaFondo) then
+    Exit;
+
+  BadgeW := Cartas[CartaIdx].BotonVisual.Width * 0.75;
+
+  if BadgeW > Cartas[CartaIdx].BotonVisual.Width - 8 then
+    BadgeW := Cartas[CartaIdx].BotonVisual.Width - 8;
+
+  BadgeH := Cartas[CartaIdx].BotonVisual.Height * 0.22;
+
+  if BadgeH < 22 then
+    BadgeH := 22;
+
+  if BadgeH > 34 then
+    BadgeH := 34;
+
+  FontSize := BadgeH * 0.48;
+
+  if FontSize < 10 then
+    FontSize := 10;
+
+  if FontSize > 15 then
+    FontSize := 15;
+
+  Cartas[CartaIdx].MarcaFondo.Width := BadgeW;
+  Cartas[CartaIdx].MarcaFondo.Height := BadgeH;
+
+  Cartas[CartaIdx].MarcaFondo.Position.X :=
+    Cartas[CartaIdx].BotonVisual.Position.X +
+    ((Cartas[CartaIdx].BotonVisual.Width - Cartas[CartaIdx].MarcaFondo.Width) / 2);
+
+  Cartas[CartaIdx].MarcaFondo.Position.Y :=
+    Cartas[CartaIdx].BotonVisual.Position.Y + 6;
+
+  Cartas[CartaIdx].MarcaFondo.XRadius := BadgeH / 2;
+  Cartas[CartaIdx].MarcaFondo.YRadius := BadgeH / 2;
+
+  if Assigned(Cartas[CartaIdx].MarcaVisual) then
+    Cartas[CartaIdx].MarcaVisual.TextSettings.Font.Size := FontSize;
 
   Cartas[CartaIdx].MarcaFondo.BringToFront;
 end;
@@ -274,16 +344,12 @@ begin
   if Duenio = 1 then
   begin
     Nombre := NombreJ1;
-
-    // Azul para jugador 1
     Cartas[CartaIdx].MarcaFondo.Fill.Color := TAlphaColors.Dodgerblue;
     Cartas[CartaIdx].MarcaFondo.Stroke.Color := TAlphaColors.White;
   end
   else if Duenio = 2 then
   begin
     Nombre := NombreJ2;
-
-    // Rojo para jugador 2
     Cartas[CartaIdx].MarcaFondo.Fill.Color := TAlphaColors.Crimson;
     Cartas[CartaIdx].MarcaFondo.Stroke.Color := TAlphaColors.White;
   end
@@ -346,11 +412,54 @@ begin
   end;
 end;
 
-procedure TCerebroMemorama.IniciarJuego(TextoCantCartas: String; ContenedorVisual: TLayout;
-  ListaImagenes: TCustomImageList; J1, J2: String);
+procedure TCerebroMemorama.ReacomodarTablero;
 var
   TotalCartas, Cols, Filas, I, C, F: Integer;
   Margen, AnchoCarta, AltoCarta: Single;
+begin
+  if not Assigned(FTablero) then
+    Exit;
+
+  TotalCartas := Length(Cartas);
+
+  if TotalCartas <= 0 then
+    Exit;
+
+  if (FTablero.Width <= 0) or (FTablero.Height <= 0) then
+    Exit;
+
+  CalcularGrid(TotalCartas, Cols, Filas);
+
+  Margen := 8;
+
+  AnchoCarta := (FTablero.Width - (Margen * (Cols + 1))) / Cols;
+  AltoCarta := (FTablero.Height - (Margen * (Filas + 1))) / Filas;
+
+  for I := 0 to TotalCartas - 1 do
+  begin
+    F := I div Cols;
+    C := I mod Cols;
+
+    if Assigned(Cartas[I].BotonVisual) then
+    begin
+      Cartas[I].BotonVisual.Width := AnchoCarta;
+      Cartas[I].BotonVisual.Height := AltoCarta;
+
+      Cartas[I].BotonVisual.Position.X :=
+        Margen + (C * (AnchoCarta + Margen));
+
+      Cartas[I].BotonVisual.Position.Y :=
+        Margen + (F * (AltoCarta + Margen));
+    end;
+
+    AjustarMarcaCarta(I);
+  end;
+end;
+
+procedure TCerebroMemorama.IniciarJuego(TextoCantCartas: String; ContenedorVisual: TLayout;
+  ListaImagenes: TCustomImageList; J1, J2: String);
+var
+  TotalCartas, I: Integer;
 begin
   NombreJ1 := J1;
 
@@ -363,7 +472,7 @@ begin
   FListaImagenes := ListaImagenes;
   FTablero.DeleteChildren;
 
-  TotalCartas := StrToIntDef(TextoCantCartas, 8);
+  TotalCartas := StrToIntDef(TextoCantCartas, 16);
   ParesTotales := TotalCartas div 2;
 
   Turno := 1;
@@ -378,35 +487,23 @@ begin
     OnActualizarUI(PtsJ1, PtsJ2, Turno);
 
   GenerarYRevolverCartas(TotalCartas);
-  CalcularGrid(TotalCartas, Cols, Filas);
-
-  Margen := 10;
-  AnchoCarta := (FTablero.Width - (Margen * (Cols + 1))) / Cols;
-  AltoCarta := (FTablero.Height - (Margen * (Filas + 1))) / Filas;
 
   for I := 0 to TotalCartas - 1 do
   begin
-    F := I div Cols;
-    C := I mod Cols;
-
     Cartas[I].BotonVisual := TImage.Create(FTablero);
     Cartas[I].BotonVisual.Parent := FTablero;
-
-    Cartas[I].BotonVisual.Width := AnchoCarta;
-    Cartas[I].BotonVisual.Height := AltoCarta;
-    Cartas[I].BotonVisual.Position.X := Margen + (C * (AnchoCarta + Margen));
-    Cartas[I].BotonVisual.Position.Y := Margen + (F * (AltoCarta + Margen));
 
     Cartas[I].BotonVisual.Tag := I;
     Cartas[I].BotonVisual.WrapMode := TImageWrapMode.Stretch;
     Cartas[I].BotonVisual.Opacity := 1;
 
     MostrarImagen(I, 0);
-
     CrearMarcaCarta(I);
 
     Cartas[I].BotonVisual.OnClick := CartaClickeada;
   end;
+
+  ReacomodarTablero;
 end;
 
 procedure TCerebroMemorama.MostrarImagen(CartaIdx, ImgIndex: Integer);
@@ -415,6 +512,9 @@ begin
     Exit;
 
   if ImgIndex >= FListaImagenes.Source.Count then
+    Exit;
+
+  if not Assigned(Cartas[CartaIdx].BotonVisual) then
     Exit;
 
   Cartas[CartaIdx].BotonVisual.Bitmap.Assign(
@@ -604,11 +704,17 @@ var
 begin
   FTimerEspera.Enabled := False;
 
-  Cartas[FPrimerCarta].Volteada := False;
-  MostrarImagen(FPrimerCarta, 0);
+  if (FPrimerCarta >= 0) and (FPrimerCarta <= High(Cartas)) then
+  begin
+    Cartas[FPrimerCarta].Volteada := False;
+    MostrarImagen(FPrimerCarta, 0);
+  end;
 
-  Cartas[FSegundaCarta].Volteada := False;
-  MostrarImagen(FSegundaCarta, 0);
+  if (FSegundaCarta >= 0) and (FSegundaCarta <= High(Cartas)) then
+  begin
+    Cartas[FSegundaCarta].Volteada := False;
+    MostrarImagen(FSegundaCarta, 0);
+  end;
 
   FPrimerCarta := -1;
   FSegundaCarta := -1;

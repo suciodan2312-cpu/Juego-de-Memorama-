@@ -13,7 +13,7 @@ uses
 
 begin
   Application.Initialize;
-  Application.FormFactor.Orientations := [TFormOrientation.Landscape, TFormOrientation.InvertedLandscape];
+  Application.FormFactor.Orientations := [TFormOrientation.Portrait, TFormOrientation.Landscape, TFormOrientation.InvertedLandscape];
   Application.CreateForm(TForm1, Form1);
   Application.CreateForm(TdmFirebase, dmFirebase);
   // Eliminamos la línea del DataModule1 que daba el error E2003
